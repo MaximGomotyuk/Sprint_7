@@ -1,16 +1,15 @@
+import api.client.OrdersClient;
+import io.qameta.allure.junit4.DisplayName;
+import io.restassured.response.ValidatableResponse;
 import org.junit.Test;
-import static io.restassured.RestAssured.given;
-
 
 public class TestOrdersList {
 
-       @Test
+    @Test
+    @DisplayName("Получение списка заказов")
     public void getOrdersList() {
-         given()
-                .get("https://qa-scooter.praktikum-services.ru/api/v1/orders")
-                .then().statusCode(200)
-                .extract()
-                .path("orders", "id");
+        OrdersClient ordersClient = new OrdersClient();
+        ValidatableResponse getOrderListSuccess = ordersClient.GetOrdersList();
+        getOrderListSuccess.statusCode(200).extract().path("orders", "id");
     }
-
 }

@@ -1,71 +1,60 @@
-import io.restassured.RestAssured;
+import api.client.CourierClient;
+import io.qameta.allure.junit4.DisplayName;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.CoreMatchers.equalTo;
 
 public class TestLoginCourier {
-    String login = "login";
-    String pass = "login";
-    String name;
-    String logJson = "{\"login\": \""+login+"\", \"password\": \""+pass+"\"}";
+
+    private int id;
+    private String login = "login";
+    private String pass = "login";
+    private String name;
+    private String logJson = "{\"login\": \"" + login + "\", \"password\": \"" + pass + "\"}";
 
     @Before
-    public void SetUp () {
-        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru";
+    public void SetUp() {
+
         this.login = RandomStringUtils.randomAlphabetic(10);
         this.pass = RandomStringUtils.randomAlphabetic(10);
         this.name = RandomStringUtils.randomAlphabetic(10);
         String json = "{\"login\": \"" + this.login + "\", \"password\": \"" + pass + "\", " +
                 "\"firstName\": \"" + name + "\"}";
 
-        given()
-                .header("Content-type", "application/json")
-                .and()
-                .body(json)
-                .when()
-                .post("/api/v1/courier");
-          }
-
-    @Test
-    public void courierCanBeAuthorized () {
-        given()
-                .header("Content-type", "application/json")
-                .and()
-                .body(logJson)
-                .when()
-                .post("/api/v1/courier/login")
-                .then()
-                .extract()
-                .path("id");
-
+        CourierClient courierClient = new CourierClient();
+        courierClient.CreateCourier(json);
+        this.id = courierClient.Login(json).extract().path("id");
     }
+
+    @After
+    public void removeCourier() {
+        CourierClient courierClient = new CourierClient();
+        courierClient.DeleteCourier(id);
+    }
+
     @Test
-    public void exceptionIfWrongLogin () {
+    @DisplayName("Курьер может авторизоваться")
+    public void courierCanBeAuthorized() {
+        CourierClient courierClient = new CourierClient();
+        courierClient.Login(logJson).extract().path("id");
+    }
+
+    @Test
+    @DisplayName("Курьер НЕ может авторизоваться с несуществующим логином")
+    public void exceptionIfWrongLogin() {
         this.login = RandomStringUtils.randomAlphabetic(10);
-        given()
-                .header("Content-type", "application/json")
-                .and()
-                .body(logJson)
-                .when()
-                .post("/api/v1/courier/login")
-                .then().statusCode(404)
-                .and()
-                .assertThat().body("message", equalTo("Учетная запись не найдена"));
+        CourierClient courierClient = new CourierClient();
+        courierClient.Login(logJson).statusCode(404).and().assertThat().body("message", equalTo("Учетная запись не найдена"));
     }
+
     @Test
-    public void exceptionWithoutLogin () {
+    @DisplayName("Курьер НЕ может авторизоваться без логина")
+    public void exceptionWithoutLogin() {
         String lJson = "{\"login\": null, \"password\": \"12345\"}";
-        given()
-                .header("Content-type", "application/json")
-                .and()
-                .body(lJson)
-                .when()
-                .post("/api/v1/courier/login")
-                .then()//.statusCode(400)
-               // .and()
-                .assertThat().body("message", equalTo("Недостаточно данных для входа"));
+        CourierClient courierClient = new CourierClient();
+        courierClient.Login(lJson).statusCode(400).and().assertThat().body("message", equalTo("Недостаточно данных для входа"));
     }
 }
